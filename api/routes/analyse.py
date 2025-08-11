@@ -2,6 +2,9 @@
 Analyse API endpoints for analysing the documents
 """
 
+# Got all the necessary information and understanding about AI agents and tools from this video:
+# https://www.youtube.com/watch?v=bTMPwUgLZf0 
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -9,6 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
+from tools import search_tool, wiki_tool, save_tool
 
 router = APIRouter()
 
@@ -59,15 +63,19 @@ async def analyse_document(
         ]
     ).partial(format_instructions=parser.get_format_instructions())
 
+    tools = [search_tool, wiki_tool, save_tool]
+
+
     agent = create_tool_calling_agent(
         llm=llm,
         prompt=prompt,
-        tools=[]
+        tools=tools
     )
 
-    agent_executor = AgentExecutor(agent=agent, tools=[], verbose=True)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-    raw_response = agent_executor.invoke({"query": "What is the capital of France?"})
+    # Update the query to fit our purpose
+    raw_response = agent_executor.invoke({"query": "What is the capital of France? and save the result to a file"})
 
     structured_response = parser.parse(raw_response.get("output"))
 
