@@ -13,3 +13,9 @@ typing_extensions
 uvicorn
 celery
 redis
+langchain
+wikipedia
+langchain-community
+langchain-openai
+langchain-anthropic
+python-dotenv
