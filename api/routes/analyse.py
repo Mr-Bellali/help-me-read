@@ -27,6 +27,7 @@ router = APIRouter()
 
 class AnalyzeRequest(BaseModel):
     document_content: str
+    language: str
 
 
 @router.post(
@@ -62,7 +63,7 @@ async def analyse_document(request: AnalyzeRequest):
             (
                 "system",
                 """
-                You are an assistant designed to help people who have difficulty reading or understanding documents and images, especially if they don’t understand the language. Your task is to:
+                You are an assistant designed to help people who have difficulty reading or understanding documents and images, especially if they don’t understand the language, the user speaks{language}. Your task is to:
                 1. Carefully analyze the content of the picture or document provided.
                 2. Summarize the main information in simple, clear language.
                 3. Identify if there is any danger, warning, or something that seems wrong or suspicious.
@@ -86,19 +87,21 @@ async def analyse_document(request: AnalyzeRequest):
 
     # Update the query to fit our purpose
     raw_response = agent_executor.invoke(
-        {"query": "What is the capital of France? and save the result to a file"}
+        {
+            "query": request.document_content,
+            "language": request.language,
+        }
     )
 
     structured_response = parser.parse(raw_response.get("output"))
 
-    # ##### Practice elevenlabs ###################### #
-
+    # Convert the response to audio to stream it
     elevenlabs = ElevenLabs(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
     )
 
     audio = elevenlabs.text_to_speech.convert(
-        text="The first move is what sets everything in motion.",
+        text=structured_response.summary,
         voice_id="JBFqnCBsd6RMkjVDRZzb",
         model_id="eleven_multilingual_v2",
         output_format="mp3_44100_128",
@@ -107,7 +110,6 @@ async def analyse_document(request: AnalyzeRequest):
     # Convert generator to bytes
     audio_bytes = b"".join(audio)
 
-    # play(audio)
 
     return StreamingResponse(
         io.BytesIO(audio_bytes),
